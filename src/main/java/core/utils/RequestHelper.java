@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class RequestHelper {
+
     private ConcurrentLinkedQueue<Call> calls = new ConcurrentLinkedQueue<>();
 
     private AtomicLong finished = new AtomicLong(0);

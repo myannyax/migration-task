@@ -3,6 +3,7 @@ package core.model;
 import java.util.ArrayList;
 
 public class MigrationResult {
+
     public MigrationResult(ArrayList<String> initialOldServerState, ArrayList<String> finalOldServerState, ArrayList<String> newServerState, ArrayList<String> copied, ArrayList<String> deleted) {
         this.initialOldServerState = initialOldServerState;
         this.finalOldServerState = finalOldServerState;

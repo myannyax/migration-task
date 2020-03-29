@@ -6,6 +6,7 @@ import core.model.MigrationResult;
 import java.io.IOException;
 
 public class Client {
+
     public static void main(String[] args) {
         Migration migration = new Migration();
         try {
@@ -25,9 +26,11 @@ public class Client {
                 System.out.println(migrationResult.getDeleted().size());
                 System.out.print("Number of files stored on the old server: ");
                 System.out.println(migrationResult.getFinalOldServerState().size());
+                System.exit(1);
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println(e.getMessage());
+            System.exit(1);
         }
     }
 }

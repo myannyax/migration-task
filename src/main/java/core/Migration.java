@@ -26,7 +26,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import static core.utils.FileUtils.writeToFile;
 
 public class Migration {
+
     private static final int MAX_NUMBER_OF_ATTEMPTS = 30;
+
     private static final String DIRECTORY = "tmp";
 
     private OldStorageService serviceOld;
@@ -48,7 +50,8 @@ public class Migration {
     private RequestHelper requestHelper = new RequestHelper();
 
     public Migration() {
-        Retrofit retrofit = new Retrofit.Builder().baseUrl("http://localhost:8080").addConverterFactory(JaxbConverterFactory.create())
+        Retrofit retrofit = new Retrofit.Builder().baseUrl("http://localhost:8080")
+                .addConverterFactory(JaxbConverterFactory.create())
                 .addConverterFactory(JacksonConverterFactory.create())
                 .build();
         serviceOld = retrofit.create(OldStorageService.class);
@@ -69,7 +72,7 @@ public class Migration {
         try {
             requestHelper.waitCalls();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            System.err.println(e.getMessage());
         }
 
         ArrayList<String> finalOldServerState = getFilesFromOldServer();
@@ -91,7 +94,7 @@ public class Migration {
                         assert response.body() != null;
                         writeToFile(response.body(), file);
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        System.err.println(e.getMessage());
                         return;
                     }
                     uploadFile(file);
