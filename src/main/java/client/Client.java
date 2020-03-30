@@ -12,19 +12,16 @@ public class Client {
         try {
             System.out.println("Transferring files...");
 
-            migration.transferFiles();
+            MigrationResult migrationResult = migration.transferFiles();
 
-            MigrationResult migrationResult = migration.getMigrationResult();
-
-            if (migrationResult.getInitialOldServerState().size() == migrationResult.getNewServerState().size()
-                    && migrationResult.getFinalOldServerState().size() == 0) {
+            if (migrationResult.isSuccessful()) {
                 System.out.println("Migration was successful");
             } else {
                 System.out.print("Migration wasn't successful\nNumber of files copied: ");
                 System.out.println(migrationResult.getCopied().size());
-                System.out.print("Number of files deleted from the old server: ");
+                System.out.print("Number of files deleted: ");
                 System.out.println(migrationResult.getDeleted().size());
-                System.out.print("Number of files stored on the old server: ");
+                System.out.print("Number of files remaining: ");
                 System.out.println(migrationResult.getFinalOldServerState().size());
                 System.exit(1);
             }

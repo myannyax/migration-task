@@ -41,12 +41,6 @@ public class Migration {
 
     private HashMap<String, AtomicLong> numberOfAttempts = new HashMap<>();
 
-    private MigrationResult migrationResult;
-
-    public MigrationResult getMigrationResult() {
-        return migrationResult;
-    }
-
     private RequestHelper requestHelper = new RequestHelper();
 
     public Migration() {
@@ -58,7 +52,7 @@ public class Migration {
         serviceNew = retrofit.create(NewStorageService.class);
     }
 
-    public void transferFiles() throws IOException {
+    public MigrationResult transferFiles() throws IOException {
         ArrayList<String> files = getFilesFromOldServer();
         File dir = new File(DIRECTORY);
         if (!dir.mkdir()) {
@@ -77,8 +71,14 @@ public class Migration {
 
         ArrayList<String> finalOldServerState = getFilesFromOldServer();
         ArrayList<String> newServerState = getFilesFromNewServer();
-        migrationResult = new MigrationResult(files, finalOldServerState, newServerState, new ArrayList<>(copied), new ArrayList<>(deleted));
+
+        boolean isSuccessful = files.size() == newServerState.size()
+                && finalOldServerState.size() == 0
+                && copied.size() == deleted.size();
+
         FileUtils.deleteDirectory(dir);
+
+        return new MigrationResult(new ArrayList<>(copied), new ArrayList<>(deleted), finalOldServerState, isSuccessful);
     }
 
     private void transferFile(String filename) {

@@ -7,7 +7,6 @@ import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
 import static java.io.File.separator;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import retrofit2.Response;
@@ -23,7 +22,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public class TestMigration {
     private final String DIRECTORY = "src/test/resources/".replace("/", separator);
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     @Test
     public void testFileUpload() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, NoSuchFieldException, IOException, InterruptedException {
         File example = new File(DIRECTORY + "example.txt");
@@ -75,16 +73,9 @@ public class TestMigration {
     @Test
     public void testMigration() throws IOException {
         Migration migration = new Migration();
-        migration.transferFiles();
 
-        MigrationResult migrationResult = migration.getMigrationResult();
+        MigrationResult migrationResult = migration.transferFiles();
 
-        int initialOldServerStateSize = migrationResult.getInitialOldServerState().size();
-        int newServerStateSize = migrationResult.getNewServerState().size();
-        int finalOldServerStateSize = migrationResult.getFinalOldServerState().size();
-
-        assertEquals(migrationResult.getCopied().size(), migrationResult.getDeleted().size());
-        assertEquals(0, finalOldServerStateSize);
-        assertEquals(initialOldServerStateSize, newServerStateSize);
+        assertTrue(migrationResult.isSuccessful());
     }
 }
