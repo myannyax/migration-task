@@ -17,20 +17,20 @@ public class RequestHelper {
 
     private static final int MAX_NUMBER_OF_ATTEMPTS = 30;
 
-    public void enqueue(Call<ResponseBody> call, Callback<ResponseBody> callback) {
-        enqueue(call, callback, MAX_NUMBER_OF_ATTEMPTS);
+    public void enqueue(Call<ResponseBody> call, OnSuccess onSuccess) {
+        enqueue(call, onSuccess, MAX_NUMBER_OF_ATTEMPTS);
     }
 
-    private void enqueue(Call<ResponseBody> call, Callback<ResponseBody> callback, int attempt) {
+    private void enqueue(Call<ResponseBody> call, OnSuccess onSuccess, int attempt) {
         calls.add(call);
         call.enqueue(new Callback<>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                 if (response.isSuccessful()) {
-                    callback.onResponse(call, response);
+                    onSuccess.action(response);
                 } else {
                     if (attempt > 1) {
-                        enqueue(call.clone(), callback, attempt - 1);
+                        enqueue(call.clone(), onSuccess, attempt - 1);
                     }
                 }
                 finished.incrementAndGet();
@@ -39,7 +39,7 @@ public class RequestHelper {
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
                 if (attempt > 1) {
-                    enqueue(call.clone(), callback, attempt - 1);
+                    enqueue(call.clone(), onSuccess, attempt - 1);
                 }
                 finished.incrementAndGet();
             }
@@ -86,5 +86,10 @@ public class RequestHelper {
             if (bound > 1) return executeUntilSuccess(call.clone(), bound - 1);
             else throw e;
         }
+    }
+
+    @FunctionalInterface
+    public interface OnSuccess {
+        void action(Response<ResponseBody> response);
     }
 }

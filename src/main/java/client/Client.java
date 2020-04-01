@@ -4,8 +4,6 @@ import core.Migration;
 import core.model.MigrationResult;
 
 import java.io.IOException;
-import java.time.Duration;
-import java.time.Instant;
 
 public class Client {
 
@@ -14,11 +12,7 @@ public class Client {
         try {
             System.out.println("Transferring files...");
 
-            Instant start = Instant.now();
             MigrationResult migrationResult = migration.transferFiles();
-            Instant finish = Instant.now();
-
-            System.out.println("Time: " + Duration.between(start, finish).getSeconds());
 
             if (migrationResult.isSuccessful()) {
                 System.out.println("Migration was successful");

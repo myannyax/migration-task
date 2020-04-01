@@ -9,8 +9,6 @@ import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.jackson.JacksonConverterFactory;
 import retrofit2.converter.jaxb.JaxbConverterFactory;
@@ -65,20 +63,12 @@ public class Migration {
 
     private void transferFile(String filename) {
         Call<ResponseBody> call = serviceOld.getFileContent(filename);
-
-        requestHelper.enqueue(call, new Callback<>() {
-            @Override
-            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                try {
-                    assert response.body() != null;
-                    uploadFile(response.body().bytes(), filename);
-                } catch (IOException e) {
-                    System.out.println(e.getMessage());
-                }
-            }
-
-            @Override
-            public void onFailure(Call<ResponseBody> call, Throwable t) {
+        requestHelper.enqueue(call, (response) -> {
+            try {
+                assert response.body() != null;
+                uploadFile(response.body().bytes(), filename);
+            } catch (IOException e) {
+                System.out.println(e.getMessage());
             }
         });
     }
@@ -89,32 +79,16 @@ public class Migration {
 
         Call<ResponseBody> uploadCall = serviceNew.uploadFile(body);
 
-        requestHelper.enqueue(uploadCall, new Callback<>() {
-            @Override
-            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                copied.add(filename);
-                deleteFile(filename);
-            }
-
-            @Override
-            public void onFailure(Call<ResponseBody> call, Throwable t) {
-            }
+        requestHelper.enqueue(uploadCall, (response) -> {
+            copied.add(filename);
+            deleteFile(filename);
         });
     }
 
     private void deleteFile(String filename) {
         Call<ResponseBody> deleteCall = serviceOld.deleteFile(filename);
 
-        requestHelper.enqueue(deleteCall, new Callback<>() {
-            @Override
-            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                deleted.add(filename);
-            }
-
-            @Override
-            public void onFailure(Call<ResponseBody> call, Throwable t) {
-            }
-        });
+        requestHelper.enqueue(deleteCall, (response) -> deleted.add(filename));
     }
 
     private ArrayList<String> getFilesFromNewServer() throws IOException {
