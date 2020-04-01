@@ -17,13 +17,9 @@ import retrofit2.converter.jaxb.JaxbConverterFactory;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class Migration {
-
-    private static final int MAX_NUMBER_OF_ATTEMPTS = 30;
 
     private OldStorageService serviceOld;
 
@@ -32,8 +28,6 @@ public class Migration {
     private ConcurrentLinkedQueue<String> copied = new ConcurrentLinkedQueue<>();
 
     private ConcurrentLinkedQueue<String> deleted = new ConcurrentLinkedQueue<>();
-
-    private HashMap<String, AtomicLong> numberOfAttempts = new HashMap<>();
 
     private RequestHelper requestHelper = new RequestHelper();
 
@@ -51,7 +45,6 @@ public class Migration {
 
         assert files != null;
         for (String filename : files) {
-            numberOfAttempts.put(filename, new AtomicLong(0));
             transferFile(filename);
         }
         try {
@@ -73,29 +66,19 @@ public class Migration {
     private void transferFile(String filename) {
         Call<ResponseBody> call = serviceOld.getFileContent(filename);
 
-        numberOfAttempts.get(filename).incrementAndGet();
-        requestHelper.addCall(call, new Callback<>() {
+        requestHelper.enqueue(call, new Callback<>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                if (response.isSuccessful()) {
-                    try {
-                        assert response.body() != null;
-                        uploadFile(response.body().bytes(), filename);
-                    } catch (IOException e) {
-                        System.out.println(e.getMessage());
-                    }
-                } else {
-                    if (numberOfAttempts.get(filename).get() < MAX_NUMBER_OF_ATTEMPTS) {
-                        transferFile(filename);
-                    }
+                try {
+                    assert response.body() != null;
+                    uploadFile(response.body().bytes(), filename);
+                } catch (IOException e) {
+                    System.out.println(e.getMessage());
                 }
             }
 
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
-                if (numberOfAttempts.get(filename).get() < MAX_NUMBER_OF_ATTEMPTS) {
-                    transferFile(filename);
-                }
             }
         });
     }
@@ -105,68 +88,42 @@ public class Migration {
         MultipartBody.Part body = MultipartBody.Part.createFormData("file", filename, requestBody);
 
         Call<ResponseBody> uploadCall = serviceNew.uploadFile(body);
-        numberOfAttempts.get(filename).incrementAndGet();
 
-        requestHelper.addCall(uploadCall, new Callback<>() {
+        requestHelper.enqueue(uploadCall, new Callback<>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                if (!response.isSuccessful()) {
-                    if (numberOfAttempts.get(filename).get() < MAX_NUMBER_OF_ATTEMPTS && !response.message().equals("already exists")) {
-                        uploadFile(content, filename);
-                    }
-                } else {
-                    copied.add(filename);
-                    deleteFile(filename);
-                }
+                copied.add(filename);
+                deleteFile(filename);
             }
 
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
-                if (numberOfAttempts.get(filename).get() < MAX_NUMBER_OF_ATTEMPTS) {
-                    uploadFile(content, filename);
-                }
             }
         });
     }
 
     private void deleteFile(String filename) {
         Call<ResponseBody> deleteCall = serviceOld.deleteFile(filename);
-        numberOfAttempts.get(filename).incrementAndGet();
 
-        requestHelper.addCall(deleteCall, new Callback<>() {
+        requestHelper.enqueue(deleteCall, new Callback<>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                if (!response.isSuccessful()) {
-                    if (numberOfAttempts.get(filename).get() < MAX_NUMBER_OF_ATTEMPTS) {
-                        deleteFile(filename);
-                    }
-                } else {
-                    deleted.add(filename);
-                }
+                deleted.add(filename);
             }
 
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
-                if (numberOfAttempts.get(filename).get() < MAX_NUMBER_OF_ATTEMPTS) {
-                    deleteFile(filename);
-                }
             }
         });
     }
 
     private ArrayList<String> getFilesFromNewServer() throws IOException {
-        Response<ArrayList<String>> response = serviceNew.getFiles().execute();
-        while (!response.isSuccessful()) {
-            response = serviceNew.getFiles().execute();
-        }
-        return response.body();
+        Call<ArrayList<String>> call = serviceNew.getFiles();
+        return RequestHelper.executeUntilSuccess(call).body();
     }
 
     private ArrayList<String> getFilesFromOldServer() throws IOException {
-        Response<ArrayList<String>> response = serviceOld.getFiles().execute();
-        while (!response.isSuccessful()) {
-            response = serviceOld.getFiles().execute();
-        }
-        return response.body();
+        Call<ArrayList<String>> call = serviceOld.getFiles();
+        return RequestHelper.executeUntilSuccess(call).body();
     }
 }

@@ -8,16 +8,14 @@ import org.junit.Test;
 import static java.io.File.separator;
 import static org.junit.Assert.*;
 
+import retrofit2.Call;
 import retrofit2.Response;
 
 import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
-@SuppressWarnings("unchecked")
 public class TestMigration {
     private final String DIRECTORY = "src/test/resources/".replace("/", separator);
 
@@ -28,12 +26,6 @@ public class TestMigration {
         byte[] content = new FileInputStream(example).readAllBytes();
 
         Migration migration = new Migration();
-
-        Field numberOfAttemptsField = Migration.class.getDeclaredField("numberOfAttempts");
-        numberOfAttemptsField.setAccessible(true);
-        HashMap<String, AtomicLong> numberOfAttempts = (HashMap<String, AtomicLong>) numberOfAttemptsField.get(migration);
-
-        numberOfAttempts.put(filename, new AtomicLong(0));
 
         Method uploadFile = Migration.class.getDeclaredMethod("uploadFile", byte[].class, String.class);
         uploadFile.setAccessible(true);
@@ -50,11 +42,9 @@ public class TestMigration {
         NewStorageService serviceNew = (NewStorageService) serviceNewField.get(migration);
 
 
-        Response<ResponseBody> resp = serviceNew.getFileContent(filename).execute();
-        while (!resp.isSuccessful()) {
-            resp = serviceNew.getFileContent(filename).execute();
-        }
-        ResponseBody body = resp.body();
+        Call<ResponseBody> call = serviceNew.getFileContent(filename);
+        Response<ResponseBody> response = RequestHelper.executeUntilSuccess(call);
+        ResponseBody body = response.body();
 
         assert body != null;
         assertArrayEquals(body.bytes(), content);
