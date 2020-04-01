@@ -8,7 +8,6 @@ import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
-import org.apache.commons.io.FileUtils;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -16,20 +15,15 @@ import retrofit2.Retrofit;
 import retrofit2.converter.jackson.JacksonConverterFactory;
 import retrofit2.converter.jaxb.JaxbConverterFactory;
 
-import javax.activation.MimetypesFileTypeMap;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static core.utils.FileUtils.writeToFile;
-
 public class Migration {
 
     private static final int MAX_NUMBER_OF_ATTEMPTS = 30;
-
-    private static final String DIRECTORY = "tmp";
 
     private OldStorageService serviceOld;
 
@@ -54,10 +48,7 @@ public class Migration {
 
     public MigrationResult transferFiles() throws IOException {
         ArrayList<String> files = getFilesFromOldServer();
-        File dir = new File(DIRECTORY);
-        if (!dir.mkdir()) {
-            throw new IOException();
-        }
+
         assert files != null;
         for (String filename : files) {
             numberOfAttempts.put(filename, new AtomicLong(0));
@@ -76,8 +67,6 @@ public class Migration {
                 && finalOldServerState.size() == 0
                 && copied.size() == deleted.size();
 
-        FileUtils.deleteDirectory(dir);
-
         return new MigrationResult(new ArrayList<>(copied), new ArrayList<>(deleted), finalOldServerState, isSuccessful);
     }
 
@@ -89,15 +78,12 @@ public class Migration {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                 if (response.isSuccessful()) {
-                    File file = new File(DIRECTORY + File.separator + filename);
                     try {
                         assert response.body() != null;
-                        writeToFile(response.body(), file);
+                        uploadFile(response.body().bytes(), filename);
                     } catch (IOException e) {
-                        System.err.println(e.getMessage());
-                        return;
+                        System.out.println(e.getMessage());
                     }
-                    uploadFile(file);
                 } else {
                     if (numberOfAttempts.get(filename).get() < MAX_NUMBER_OF_ATTEMPTS) {
                         transferFile(filename);
@@ -114,32 +100,30 @@ public class Migration {
         });
     }
 
-    private void uploadFile(File file) {
-        RequestBody requestFile = RequestBody.create(file, MediaType.parse(MimetypesFileTypeMap.getDefaultFileTypeMap().getContentType(file)));
-        MultipartBody.Part body = MultipartBody.Part.createFormData("file", file.getName(), requestFile);
+    private void uploadFile(byte[] content, String filename) {
+        RequestBody requestBody = RequestBody.create(content, MediaType.parse("application/octet-stream"));
+        MultipartBody.Part body = MultipartBody.Part.createFormData("file", filename, requestBody);
 
         Call<ResponseBody> uploadCall = serviceNew.uploadFile(body);
-        numberOfAttempts.get(file.getName()).incrementAndGet();
+        numberOfAttempts.get(filename).incrementAndGet();
 
         requestHelper.addCall(uploadCall, new Callback<>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                 if (!response.isSuccessful()) {
-                    if (numberOfAttempts.get(file.getName()).get() < MAX_NUMBER_OF_ATTEMPTS && !response.message().equals("already exists")) {
-                        uploadFile(file);
+                    if (numberOfAttempts.get(filename).get() < MAX_NUMBER_OF_ATTEMPTS && !response.message().equals("already exists")) {
+                        uploadFile(content, filename);
                     }
                 } else {
-                    copied.add(file.getName());
-                    //noinspection ResultOfMethodCallIgnored
-                    file.delete();
-                    deleteFile(file.getName());
+                    copied.add(filename);
+                    deleteFile(filename);
                 }
             }
 
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
-                if (numberOfAttempts.get(file.getName()).get() < MAX_NUMBER_OF_ATTEMPTS) {
-                    uploadFile(file);
+                if (numberOfAttempts.get(filename).get() < MAX_NUMBER_OF_ATTEMPTS) {
+                    uploadFile(content, filename);
                 }
             }
         });

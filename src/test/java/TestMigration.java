@@ -3,11 +3,10 @@ import core.internal.NewStorageService;
 import core.model.MigrationResult;
 import core.utils.RequestHelper;
 import okhttp3.ResponseBody;
-import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
 import static java.io.File.separator;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import retrofit2.Response;
 
@@ -24,20 +23,21 @@ public class TestMigration {
 
     @Test
     public void testFileUpload() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, NoSuchFieldException, IOException, InterruptedException {
+        String filename = "example.txt";
         File example = new File(DIRECTORY + "example.txt");
-        File file = new File(DIRECTORY + "copy_" + "example.txt");
-        FileUtils.copyFile(example, file);
+        byte[] content = new FileInputStream(example).readAllBytes();
+
         Migration migration = new Migration();
 
         Field numberOfAttemptsField = Migration.class.getDeclaredField("numberOfAttempts");
         numberOfAttemptsField.setAccessible(true);
         HashMap<String, AtomicLong> numberOfAttempts = (HashMap<String, AtomicLong>) numberOfAttemptsField.get(migration);
 
-        numberOfAttempts.put("copy_example.txt", new AtomicLong(0));
+        numberOfAttempts.put(filename, new AtomicLong(0));
 
-        Method uploadFile = Migration.class.getDeclaredMethod("uploadFile", File.class);
+        Method uploadFile = Migration.class.getDeclaredMethod("uploadFile", byte[].class, String.class);
         uploadFile.setAccessible(true);
-        uploadFile.invoke(migration, file);
+        uploadFile.invoke(migration, content, filename);
 
         Field requestHelperField = Migration.class.getDeclaredField("requestHelper");
         requestHelperField.setAccessible(true);
@@ -45,29 +45,19 @@ public class TestMigration {
 
         requestHelper.waitCalls();
 
-        file.delete();
-
         Field serviceNewField = Migration.class.getDeclaredField("serviceNew");
         serviceNewField.setAccessible(true);
         NewStorageService serviceNew = (NewStorageService) serviceNewField.get(migration);
 
 
-        Response<ResponseBody> resp = serviceNew.getFileContent(file.getName()).execute();
+        Response<ResponseBody> resp = serviceNew.getFileContent(filename).execute();
         while (!resp.isSuccessful()) {
-            resp = serviceNew.getFileContent(file.getName()).execute();
+            resp = serviceNew.getFileContent(filename).execute();
         }
         ResponseBody body = resp.body();
-        File result = new File(DIRECTORY + "new_" + "example.txt");
-        try {
-            assert body != null;
-            try (InputStream input = body.byteStream(); OutputStream output = new FileOutputStream(result)) {
-                input.transferTo(output);
-            }
-            assertTrue(FileUtils.contentEquals(example, result));
-            result.delete();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+
+        assert body != null;
+        assertArrayEquals(body.bytes(), content);
     }
 
     @Test
