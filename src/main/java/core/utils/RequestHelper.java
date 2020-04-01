@@ -29,7 +29,7 @@ public class RequestHelper {
                 if (response.isSuccessful()) {
                     onSuccess.action(response);
                 } else {
-                    if (attempt > 1) {
+                    if (attempt > 1 && !response.message().equals("already exists")) {
                         enqueue(call.clone(), onSuccess, attempt - 1);
                     }
                 }
