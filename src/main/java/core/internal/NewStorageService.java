@@ -15,7 +15,7 @@ public interface NewStorageService {
     Call<ResponseBody> getFileContent(@Path("filename") String filename);
 
     @DELETE("/newStorage/files/{filename}")
-    Call<ResponseBody> getFile(@Path("filename") String filename);
+    Call<ResponseBody> deleteFile(@Path("filename") String filename);
 
     @Multipart
     @POST("/newStorage/files")
