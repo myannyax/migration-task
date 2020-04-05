@@ -10,6 +10,7 @@ repositories {
 
 dependencies {
     testCompile("junit", "junit", "4.12")
+    testCompile("org.mockito:mockito-core:3.3.3")
     implementation("org.apache.directory.studio:org.apache.commons.io:2.4")
 
     implementation("com.squareup.retrofit2:retrofit:2.7.2")
