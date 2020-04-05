@@ -1,6 +1,7 @@
 package client;
 
 import core.Migration;
+import core.MigrationFactory;
 import core.model.MigrationResult;
 
 import java.io.IOException;
@@ -8,7 +9,7 @@ import java.io.IOException;
 public class Client {
 
     public static void main(String[] args) {
-        Migration migration = new Migration();
+        Migration migration = MigrationFactory.create();
         try {
             System.out.println("Transferring files...");
 

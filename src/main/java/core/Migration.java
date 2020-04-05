@@ -9,9 +9,6 @@ import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
-import retrofit2.Retrofit;
-import retrofit2.converter.jackson.JacksonConverterFactory;
-import retrofit2.converter.jaxb.JaxbConverterFactory;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -29,13 +26,9 @@ public class Migration {
 
     private RequestHelper requestHelper = new RequestHelper();
 
-    public Migration() {
-        Retrofit retrofit = new Retrofit.Builder().baseUrl("http://localhost:8080")
-                .addConverterFactory(JaxbConverterFactory.create())
-                .addConverterFactory(JacksonConverterFactory.create())
-                .build();
-        serviceOld = retrofit.create(OldStorageService.class);
-        serviceNew = retrofit.create(NewStorageService.class);
+    Migration(OldStorageService serviceOld, NewStorageService serviceNew) {
+        this.serviceOld = serviceOld;
+        this.serviceNew = serviceNew;
     }
 
     public MigrationResult transferFiles() throws IOException {

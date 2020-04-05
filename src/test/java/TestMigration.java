@@ -1,4 +1,5 @@
 import core.Migration;
+import core.MigrationFactory;
 import core.internal.NewStorageService;
 import core.model.MigrationResult;
 import core.utils.RequestHelper;
@@ -25,7 +26,7 @@ public class TestMigration {
         File example = new File(DIRECTORY + "example.txt");
         byte[] content = new FileInputStream(example).readAllBytes();
 
-        Migration migration = new Migration();
+        Migration migration = MigrationFactory.create();
 
         Method uploadFile = Migration.class.getDeclaredMethod("uploadFile", byte[].class, String.class);
         uploadFile.setAccessible(true);
@@ -52,7 +53,7 @@ public class TestMigration {
 
     @Test
     public void testMigration() throws IOException {
-        Migration migration = new Migration();
+        Migration migration = MigrationFactory.create();
 
         MigrationResult migrationResult = migration.transferFiles();
 
